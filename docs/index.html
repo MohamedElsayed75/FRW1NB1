@@ -294,13 +294,13 @@
     <p>On every metric measured, under both splits, the hand-written baseline outperforms the learned model.</p>
     <figure>
       <img src="img/roc_auc_comparison.png" alt="Bar chart comparing ROC-AUC of the Week-4 baseline and Week-5 Logistic Regression model, under the random and grouped-by-client splits.">
-      <figcaption>Figure 1. ROC-AUC, model vs. baseline, same test rows.</figcaption>
+      <figcaption>Figure 1. The baseline beats the model on ROC-AUC under both splits — see the leakage caveat before reading either number as a forecast.</figcaption>
     </figure>
 
     <p>Precision@50 — the metric originally identified as this project's primary success criterion — tells a more nuanced story once its construction is examined closely.</p>
     <figure>
       <img src="img/precision_at_50_comparison.png" alt="Bar chart comparing Precision at 50 of the baseline and model, under both splits.">
-      <figcaption>Figure 2. Precision@50, model vs. baseline, same test rows.</figcaption>
+      <figcaption>Figure 2. The baseline's perfect Precision@50 is a construction artifact of its scoring rule, not a validated result.</figcaption>
     </figure>
 
     <div class="flag">
@@ -315,7 +315,7 @@
 
     <figure>
       <img src="img/feature_coefficients.png" alt="Horizontal bar chart of Logistic Regression standardized coefficients for the five model features.">
-      <figcaption>Figure 3. Logistic Regression standardized coefficients.</figcaption>
+      <figcaption>Figure 3. GSC impressions and clicks are the model's strongest signals; the rest contribute comparatively little.</figcaption>
     </figure>
     <p>Feature coefficients show GSC impressions as the strongest signal associated with the model's predicted probability of decline, followed by GSC clicks in the opposite direction; GA4 sessions, average position, and GA4 pageviews contribute comparatively little.</p>
   </section>
@@ -364,7 +364,7 @@
 
     <figure>
       <img src="img/reason_code_distribution.png" alt="Bar chart of reason code distribution across the ranked action queue.">
-      <figcaption>Figure 4. Ranked action queue: reason code distribution.</figcaption>
+      <figcaption>Figure 4. 72% of pages need no action; the rest split across four escalating reason codes.</figcaption>
     </figure>
 
     <p>Note on consistency with Week 4: the underlying 0–100 score and the four score bands are identical to the Week-4 baseline notebook — the <code>NO_ACTION</code> count above (251,501) matches the Week-4 score&nbsp;=&nbsp;0 count exactly. The reason-code wording differs slightly between the two notebooks: Week 4 required a decline of &minus;20% or worse before assigning the decline codes, while Week 7 (used here) assigns those same codes to any decline below 0%, and adds a <code>HIGH_VISIBILITY</code> code Week 4 didn't have. The score and final action a page receives are unaffected — only the reason text a reviewer sees changes.</p>
