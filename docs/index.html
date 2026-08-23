@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ranking Content for Refresh Review — FlyRank ML Internship Capstone</title>
+<meta name="description" content="Which pages should a content team review first for refresh? A rule-based baseline vs. a Logistic Regression model on 349,411 client–content pairs, validated honestly.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F6F7F5;
+    --paper-raised:#FFFFFF;
+    --ink:#1C2321;
+    --muted:#666B64;
+    --line:#DBDDD7;
+    --accent:#1D5C77;
+    --accent-dim:#1D5C7714;
+    --flag:#B8412A;
+    --flag-dim:#B8412A0F;
+    --green:#3D7A54;
+    --serif:'Source Serif 4', Georgia, serif;
+    --sans:'IBM Plex Sans', -apple-system, sans-serif;
+    --mono:'IBM Plex Mono', 'SF Mono', monospace;
+    --maxw:760px;
+  }
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:var(--sans); font-size:17px; line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent);}
+  a:focus, button:focus{outline:2px solid var(--accent); outline-offset:2px;}
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:0 24px;}
+
+  /* ---------- masthead ---------- */
+  .masthead{padding:72px 0 40px; border-bottom:1px solid var(--line);}
+  .eyebrow{
+    font-family:var(--mono); font-size:12px; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--accent); margin:0 0 18px;
+  }
+  h1.title{
+    font-family:var(--serif); font-weight:600; font-size:clamp(28px,4.4vw,42px);
+    line-height:1.15; margin:0 0 18px; letter-spacing:-.01em;
+  }
+  .byline{font-family:var(--sans); color:var(--muted); font-size:15px; margin:0;}
+
+  .stats{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:1px;
+    background:var(--line); border:1px solid var(--line);
+    margin-top:36px;
+  }
+  .stat{background:var(--paper-raised); padding:16px 14px;}
+  .stat .n{font-family:var(--mono); font-weight:600; font-size:20px; color:var(--accent); display:block;}
+  .stat .l{font-family:var(--sans); font-size:12px; color:var(--muted); margin-top:4px; display:block; line-height:1.3;}
+
+  /* ---------- table of contents ---------- */
+  nav.toc{padding:32px 0 8px;}
+  nav.toc .toc-label{
+    font-family:var(--mono); font-size:12px; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--muted); margin-bottom:14px;
+  }
+  nav.toc ol{
+    list-style:none; margin:0; padding:0;
+    display:grid; grid-template-columns:1fr 1fr; gap:6px 24px;
+  }
+  nav.toc li a{
+    display:flex; gap:10px; text-decoration:none; color:var(--ink);
+    font-size:14.5px; padding:5px 0; border-bottom:1px solid transparent;
+  }
+  nav.toc li a:hover{border-bottom-color:var(--accent);}
+  nav.toc li a .num{font-family:var(--mono); color:var(--muted); min-width:16px;}
+
+  /* ---------- sections ---------- */
+  section{padding:44px 0;}
+  section + section{border-top:1px solid var(--line);}
+  .sec-head{display:flex; align-items:baseline; gap:14px; margin-bottom:20px;}
+  .sec-head .num{font-family:var(--mono); font-size:14px; color:var(--muted);}
+  h2{font-family:var(--serif); font-weight:600; font-size:26px; margin:0; letter-spacing:-.01em;}
+  h3{font-family:var(--serif); font-weight:600; font-size:19px; margin:28px 0 10px; color:var(--ink);}
+  p{margin:0 0 16px;}
+  ul, ol.plain{margin:0 0 16px; padding-left:22px;}
+  li{margin-bottom:7px;}
+  code, .mono{font-family:var(--mono); font-size:.92em;}
+  strong{font-weight:600;}
+
+  /* ---------- flag callout ---------- */
+  .flag{
+    border-left:3px solid var(--flag); background:var(--flag-dim);
+    padding:16px 20px; margin:20px 0; border-radius:0 3px 3px 0;
+  }
+  .flag .flag-label{
+    font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--flag); display:block; margin-bottom:8px; font-weight:600;
+  }
+  .flag p{margin:0;}
+  .flag p + p{margin-top:10px;}
+
+  /* ---------- tables ---------- */
+  .table-wrap{overflow-x:auto; margin:20px 0 6px; border:1px solid var(--line);}
+  table{border-collapse:collapse; width:100%; min-width:480px;}
+  th, td{
+    text-align:left; padding:8px 10px; border-bottom:1px solid var(--line);
+    font-family:var(--mono); font-size:13px; white-space:nowrap;
+  }
+  /* Wide data tables (many numeric columns) break out of the normal reading
+     column on screens with room to spare, so every column is visible without
+     scrolling -- important here since a hidden column would hide the whole
+     Precision@50 point. Falls back to horizontal scroll below that width. */
+  @media (min-width:1040px){
+    .table-wrap.wide{
+      width:960px; max-width:960px; margin-left:-124px;
+    }
+  }
+  /* Below this width, no table fits comfortably in columns -- mono feature
+     names and full-sentence "concern"/"action" cells both overflow. Every
+     table becomes a stack of labeled cards instead of relying on horizontal
+     scroll, which is easy to miss on a phone. */
+  @media (max-width:640px){
+    .table-wrap{overflow-x:visible; border:none;}
+    .table-wrap.wide{width:100%; margin-left:0; max-width:100%;}
+    .table-wrap table{width:100%; min-width:0;}
+    .table-wrap thead{display:none;}
+    .table-wrap table, .table-wrap tbody, .table-wrap tr, .table-wrap td{display:block; width:auto;}
+    .table-wrap tr{
+      border:1px solid var(--line); border-radius:4px; margin-bottom:10px;
+      padding:10px 12px; background:var(--paper-raised);
+    }
+    .table-wrap td{border-bottom:none; padding:5px 0; white-space:normal;}
+    .table-wrap td::before{
+      content:attr(data-label); display:block; font-family:var(--sans); font-weight:600;
+      font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted);
+      margin-bottom:2px;
+    }
+  }
+  td:last-child, th:last-child{white-space:normal;}
+  th{
+    background:var(--accent-dim); font-family:var(--sans); font-weight:600;
+    font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--accent);
+  }
+  tr:last-child td{border-bottom:none;}
+  .table-caption{
+    font-family:var(--sans); font-size:13px; color:var(--muted); font-style:italic;
+    margin:0 0 28px;
+  }
+
+  /* ---------- figures ---------- */
+  figure{margin:24px 0;}
+  figure img{width:100%; height:auto; display:block; border:1px solid var(--line);}
+  figcaption{
+    font-family:var(--sans); font-size:13px; color:var(--muted); font-style:italic;
+    margin-top:8px;
+  }
+
+  /* ---------- footer ---------- */
+  footer{padding:40px 0 80px; color:var(--muted); font-size:13.5px;}
+  footer a{color:var(--muted);}
+
+  @media (max-width:600px){
+    body{font-size:16px;}
+    .masthead{padding:48px 0 32px;}
+    .stats{grid-template-columns:1fr 1fr;}
+    nav.toc ol{grid-template-columns:1fr;}
+    section{padding:32px 0;}
+    h2{font-size:22px;}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{scroll-behavior:auto !important;}
+  }
+  html{scroll-behavior:smooth;}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="wrap">
+    <p class="eyebrow">FlyRank ML Internship — Capstone Research Paper</p>
+    <h1 class="title">Ranking Content for Refresh Review: A Decision-Support Approach Using Search and Engagement Signals</h1>
+    <p class="byline">Mohamed E. AbdElghany</p>
+    <div class="stats">
+      <div class="stat"><span class="n">349,411</span><span class="l">client–content pairs</span></div>
+      <div class="stat"><span class="n">9.97%</span><span class="l">base decline rate</span></div>
+      <div class="stat"><span class="n">0.963 / 0.826</span><span class="l">baseline vs. model ROC-AUC</span></div>
+      <div class="stat"><span class="n">3</span><span class="l">leakage findings, all reported</span></div>
+    </div>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="wrap">
+    <p class="toc-label">Contents</p>
+    <ol>
+      <li><a href="#abstract"><span class="num">—</span> Abstract</a></li>
+      <li><a href="#intro"><span class="num">01</span> Introduction / Problem Statement</a></li>
+      <li><a href="#data"><span class="num">02</span> Data</a></li>
+      <li><a href="#methodology"><span class="num">03</span> Methodology</a></li>
+      <li><a href="#results"><span class="num">04</span> Results (vs Baseline)</a></li>
+      <li><a href="#limitations"><span class="num">05</span> Limitations &amp; Honest Framing</a></li>
+      <li><a href="#recommendations"><span class="num">06</span> Ranked Recommendations</a></li>
+      <li><a href="#reproducibility"><span class="num">07</span> Reproducibility</a></li>
+      <li><a href="#acknowledgments"><span class="num">08</span> Acknowledgments &amp; Data Credit</a></li>
+    </ol>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <section id="abstract">
+    <div class="sec-head"><h2>Abstract</h2></div>
+    <p>Content teams managing large page inventories cannot manually review every page for a possible refresh — this work asks which pages should be reviewed first, using observable search and engagement signals from the FlyRank ML Internship warehouse. On a March-2026 development slice of 349,411 client–content pairs (a 9.97% base rate for a month-over-month click decline), we compare a five-signal rule-based baseline against a Logistic Regression model trained on the same five features, evaluated on both a random 70/30 split and a stricter client-grouped split. The baseline outperforms the model on every metric measured under both splits (ROC-AUC 0.9629 vs. 0.8259 random-split, 0.8174 grouped-split); a leakage audit found, however, that one of the five model features is directly involved in the label's own definition, so both results measure a same-window association rather than a genuine forecast — and the baseline's near-perfect Precision@50 turns out to be a mathematical artifact of its scoring rule, not an empirical win. The validated output is a ranked, reason-coded action queue covering all 349,411 pairs, intended to prioritize human editorial review rather than automate content decisions. We report this as a directional, decision-support signal, not a predictive or causal claim about refresh outcomes.</p>
+  </section>
+
+  <section id="intro">
+    <div class="sec-head"><span class="num">01</span><h2>Introduction / Problem Statement</h2></div>
+    <p>Content teams managing large inventories of published pages face a basic constraint: they cannot review every page for a possible refresh, so they need a way to decide which pages deserve attention first. This work addresses that decision directly: given a client's content inventory, which pages should be reviewed first for a possible refresh, based on observable search and engagement signals?</p>
+    <p>The unit of analysis is a single client–content pair — one page belonging to one client — observed across a given month. The output is a ranked list, one row per content item, carrying a score, a reason code explaining why the page was ranked where it was, and a recommended action drawn from a small fixed set (<code>REVIEW_REFRESH</code>, <code>REVIEW</code>, <code>MONITOR</code>, <code>NO_ACTION</code>). A client's content or SEO team uses this list as a starting point for manual review; the system does not make or publish any content decision on its own.</p>
+    <p>Two kinds of mistakes are possible, and they carry different costs. A false positive sends an editor to review a page that did not actually need attention — a bounded, recoverable cost of wasted time. A false negative skips a page that is genuinely losing search visibility, and that loss compounds the longer it goes unnoticed. Because the second failure mode is more expensive and harder to detect after the fact, this work treats recall and directional usefulness as at least as important as precision, and reports both honestly even where the results are not flattering.</p>
+    <p>Prioritization matters here specifically because the problem sits between two extremes. In the March-2026 development slice used throughout this work, 9.97% of client–content pairs show a month-over-month decline in average Search Console clicks. That is small enough that a &ldquo;review everything&rdquo; policy is unnecessary, but too large a population — tens of thousands of pages — to review by hand without some ranking. That gap is the condition under which a ranked queue earns its place over either a flat to-do list or no process at all.</p>
+  </section>
+
+  <section id="data">
+    <div class="sec-head"><span class="num">02</span><h2>Data</h2></div>
+    <p>This work uses the <code>fact_content_daily_performance</code> table from the FlyRank ML Internship warehouse (<code>hf://datasets/FlyRank/internship-warehouse</code>), accessed via DuckDB over Hugging&nbsp;Face–hosted Parquet files. Each row represents one content item, for one client, on one reporting date; this grain was verified directly — a query for duplicate (client, content, date) combinations in the March-2026 slice returned zero rows.</p>
+    <p>The development window is February and March 2026, used together to build month-over-month features and a decline label. March 2026 alone contains 9,841,378 raw rows. Aggregated to one row per client–content pair with both months present, the development set used for baseline scoring, modeling, and validation contains 349,411 pairs.</p>
+    <p>Data coverage is uneven and worth stating plainly: of the 9,841,378 March rows, only 3,611,061 (36.7%) have Search Console data marked available, and only 413,966 (4.2%) have Analytics data marked available. The five features used throughout this work are only as informative as this coverage allows — content or clients without tracked Search Console or Analytics data are effectively invisible to this analysis, not scored as unremarkable.</p>
+    <p>Five features were used: average monthly GSC impressions, average monthly GSC clicks, average monthly GSC position, average monthly GA4 pageviews, and average monthly GA4 sessions, computed per client–content pair. Two categories of fields were deliberately excluded. Client and content identifiers were used only to group and de-duplicate rows, never as model inputs, so that no model could learn to memorize specific entities instead of a general signal. The decline label itself, along with any information from beyond the observation window, was excluded from the feature set — though Section 03 documents an important limitation to how cleanly that separation actually held in practice.</p>
+    <p>No client names, domains, URLs, or raw warehouse exports appear anywhere in this repository or in this paper; only hashed client and content identifiers are used, and only for grouping.</p>
+  </section>
+
+  <section id="methodology">
+    <div class="sec-head"><span class="num">03</span><h2>Methodology</h2></div>
+
+    <h3>Label</h3>
+    <p>A client–content pair is labeled as declining (<code>is_declining_label&nbsp;=&nbsp;1</code>) if its average March GSC clicks are lower than its average February GSC clicks, and not declining otherwise. Across the 349,411-pair development set, 34,837 pairs (9.97%) are labeled declining — the base rate against which every metric in this paper should be read.</p>
+
+    <h3>Baseline</h3>
+    <p>The baseline is a transparent, hand-written rule rather than a learned model. Two signals each contribute up to 40 points: a month-over-month GSC click decline and a month-over-month GSC impression decline, with full credit for a drop of &minus;20% or worse and half credit for a milder decline. A 20-point visibility floor is added when a page still has at least 100 March impressions. The resulting 0–100 score maps onto the same four-way action scale described in the Introduction.</p>
+
+    <h3>Model</h3>
+    <p>The learned model is a Logistic Regression, chosen because the target is binary and the model produces an interpretable probability rather than an opaque score — a fair, simple comparison point for a hand-written rule. Features are median-imputed, standardized, and passed to a Logistic Regression classifier (<code>max_iter=1000</code>, <code>random_state=42</code>) inside a single pipeline, using the same five features described in Data.</p>
+
+    <h3>Validation design</h3>
+    <p>Two splits were used deliberately, not just one. A random 70/30 stratified split gives an initial development read, but allows content from the same client to appear in both training and test data, which can inflate apparent performance. A grouped-by-client split (scikit-learn's <code>GroupShuffleSplit</code>, zero client overlap between train and test, confirmed directly) gives a stricter measure of how the model performs on clients it has never seen. Both splits use <code>random_state=42</code>.</p>
+
+    <h3>Leakage findings</h3>
+    <p>Three separate leakage findings emerged over the course of this work, and all three are reported rather than only the most flattering one.</p>
+    <ol class="plain">
+      <li>An early deliberate test — adding a feature that directly copied the label — pushed ROC-AUC to a perfect 1.0000; removing that feature dropped ROC-AUC to 0.8061, confirming the leak-detection method before it was needed on real features.</li>
+      <li>A later audit of the actual five-feature model found a real problem — see below.</li>
+      <li>The same issue reappears in the baseline's own scoring rule — discussed in full in Results.</li>
+    </ol>
+
+    <div class="flag">
+      <span class="flag-label">Leakage flag</span>
+      <p><code>avg_gsc_clicks_2026-03</code>, one of the five model features, is not independent of the label. Because the label is defined as March clicks below February clicks, March clicks are part of the label's own definition, not merely correlated with it. This means the model's headline numbers describe a <strong>same-window association</strong>, not a genuine past-to-future forecast.</p>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Feature</th><th>Concern</th></tr></thead>
+        <tbody>
+          <tr><td data-label="Feature">avg_gsc_impressions_2026-03</td><td data-label="Concern">Same window as the target, but not part of its definition.</td></tr>
+          <tr><td data-label="Feature">avg_gsc_clicks_2026-03</td><td data-label="Concern">Directly used in the target definition (March clicks &lt; February clicks). FLAGGED.</td></tr>
+          <tr><td data-label="Feature">avg_position_2026-03</td><td data-label="Concern">Measured in the target window.</td></tr>
+          <tr><td data-label="Feature">avg_ga4_pageviews_2026-03</td><td data-label="Concern">Measured in the target window.</td></tr>
+          <tr><td data-label="Feature">avg_ga4_sessions_2026-03</td><td data-label="Concern">Measured in the target window.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="table-caption">Table 1. Feature-by-feature leakage audit (Week 6).</p>
+  </section>
+
+  <section id="results">
+    <div class="sec-head"><span class="num">04</span><h2>Results (vs Baseline)</h2></div>
+    <p>Both the baseline rule and the Logistic Regression model were evaluated on identical test rows, using identical metrics, under both the random and the grouped-by-client split.</p>
+
+    <div class="table-wrap wide">
+      <table>
+        <thead><tr><th>Split</th><th>Method</th><th>ROC-AUC</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1</th><th>P@50</th></tr></thead>
+        <tbody>
+          <tr><td data-label="Split">Random 70/30</td><td data-label="Method">Baseline (W4)</td><td data-label="ROC-AUC">0.9629</td><td data-label="Accuracy">0.9574</td><td data-label="Precision">0.9755</td><td data-label="Recall">0.5878</td><td data-label="F1">0.7336</td><td data-label="P@50">1.0000</td></tr>
+          <tr><td data-label="Split">Random 70/30</td><td data-label="Method">LogReg (W5)</td><td data-label="ROC-AUC">0.8259</td><td data-label="Accuracy">0.8997</td><td data-label="Precision">0.4716</td><td data-label="Recall">0.0468</td><td data-label="F1">0.0851</td><td data-label="P@50">0.4200</td></tr>
+          <tr><td data-label="Split">Grouped by client</td><td data-label="Method">Baseline (W4)</td><td data-label="ROC-AUC">—</td><td data-label="Accuracy">—</td><td data-label="Precision">—</td><td data-label="Recall">—</td><td data-label="F1">—</td><td data-label="P@50">1.0000</td></tr>
+          <tr><td data-label="Split">Grouped by client</td><td data-label="Method">LogReg (W5)</td><td data-label="ROC-AUC">0.8174</td><td data-label="Accuracy">0.9211</td><td data-label="Precision">0.3417</td><td data-label="Recall">0.0139</td><td data-label="F1">0.0267</td><td data-label="P@50">0.2600</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="table-caption">Table 2. Model vs. baseline, same test rows, both splits. Base rate: 9.97% declining.</p>
+
+    <p>On every metric measured, under both splits, the hand-written baseline outperforms the learned model.</p>
+    <figure>
+      <img src="img/roc_auc_comparison.png" alt="Bar chart comparing ROC-AUC of the Week-4 baseline and Week-5 Logistic Regression model, under the random and grouped-by-client splits.">
+      <figcaption>Figure 1. ROC-AUC, model vs. baseline, same test rows.</figcaption>
+    </figure>
+
+    <p>Precision@50 — the metric originally identified as this project's primary success criterion — tells a more nuanced story once its construction is examined closely.</p>
+    <figure>
+      <img src="img/precision_at_50_comparison.png" alt="Bar chart comparing Precision at 50 of the baseline and model, under both splits.">
+      <figcaption>Figure 2. Precision@50, model vs. baseline, same test rows.</figcaption>
+    </figure>
+
+    <div class="flag">
+      <span class="flag-label">Caveat — not an empirical win</span>
+      <p>The baseline's Precision@50 of 1.0000 under both splits is a direct, provable consequence of how the scoring rule is built, not evidence of good ranking. A pair can only reach the baseline's top score tier (&ge;80) through a nonzero click-decline contribution, and any nonzero click-decline contribution requires March clicks below February clicks — which is the label's own definition. Every pair scoring &ge;80 is a true positive by construction; since 1,490 pairs reach the maximum score, the top 50 are guaranteed correct before ranking even begins.</p>
+      <p>The model's Precision@50 (0.4200 random split, 0.2600 grouped split) carries no such guarantee — it reflects an actual prediction from raw March-level features — and both figures clear the 9.97% base rate comfortably, even though neither approaches the baseline's inflated number.</p>
+    </div>
+
+    <p>A further check makes the same point from a different angle: at the default 0.5 probability threshold, the model's raw accuracy (89.97%, random split) is lower than simply always predicting &ldquo;not declining&rdquo; (90.03%) on the identical test rows. This does not contradict the model's ROC-AUC of 0.8259 — the model carries real, above-chance ranking signal — but it does mean accuracy and F1 are close to uninformative at this class balance, and that Precision@50 and ROC-AUC are the metrics that actually matter here.</p>
+
+    <p>Recall is the model's clearest weakness regardless of split: it misses 9,962 of 10,451 genuinely declining pairs under the random split (recall 0.0468), and an even larger share under the grouped split (recall 0.0139).</p>
+
+    <figure>
+      <img src="img/feature_coefficients.png" alt="Horizontal bar chart of Logistic Regression standardized coefficients for the five model features.">
+      <figcaption>Figure 3. Logistic Regression standardized coefficients.</figcaption>
+    </figure>
+    <p>Feature coefficients show GSC impressions as the strongest signal associated with the model's predicted probability of decline, followed by GSC clicks in the opposite direction; GA4 sessions, average position, and GA4 pageviews contribute comparatively little.</p>
+  </section>
+
+  <section id="limitations">
+    <div class="sec-head"><span class="num">05</span><h2>Limitations &amp; Honest Framing</h2></div>
+
+    <div class="flag">
+      <span class="flag-label">Headline finding</span>
+      <p>At the default 0.5 threshold, the Logistic Regression model's raw accuracy (89.97%, random split) is <strong>below</strong> the trivial &ldquo;always predict not-declining&rdquo; baseline (90.03%) on the identical test set. This is not a contradiction of the model's ROC-AUC (0.8259) — the model does carry real ranking signal — but it means accuracy and F1 are not informative metrics for this 9.97% base-rate problem.</p>
+    </div>
+
+    <p><strong>Main limitation — same-window leakage:</strong> the label is defined as &ldquo;March clicks &lt; February clicks,&rdquo; and one of the five model features (<code>avg_gsc_clicks_2026-03</code>) is part of that same definition. This work is a same-window association measurement, not a past&rarr;future forecast. Both the model's ROC-AUC (0.8259 / 0.8174) and the baseline's near-perfect Precision@50 (1.0000, both splits) are inflated by this same root cause, expressed two different ways. Neither number should be read as &ldquo;this system predicts future decline.&rdquo;</p>
+    <p><strong>Recall is low regardless of split.</strong> The model misses 9,962 of 10,451 true decliners under the random split (recall 0.0468), and misses an even larger share under the stricter grouped-by-client split (recall 0.0139). Whatever this system is used for, it cannot be the only filter.</p>
+    <p><strong>Data coverage is partial.</strong> Only 36.7% of March rows have GSC data marked available and only 4.2% have GA4 data marked available. Pages or clients without tracked data are invisible to this model, not scored as &ldquo;fine.&rdquo;</p>
+    <p><strong>The planned held-out month was never used.</strong> The Week-3 data contract explicitly reserved June 2026 as a sealed outcome month, specifically so a genuine past&rarr;future test could happen later. That test was never run. This work has not been validated against any month it wasn't developed on.</p>
+    <p><strong>Five features, no content or context signals.</strong> The feature set carries no content age, content type, competitive/SERP context, or seasonality — all of which the FlyRank research paper itself flags as relevant to the freshness/refresh question. The model cannot distinguish a page that needs editorial attention from one that's just following a seasonal or algorithmic pattern.</p>
+
+    <h3>What this work does not and cannot claim</h3>
+    <ul>
+      <li>It does not establish that refreshing content improves search performance — no causal design, only observed association.</li>
+      <li>It does not predict future decline — see the leakage finding above.</li>
+      <li>It does not represent Google's ranking algorithm or any of its factors.</li>
+      <li>It has not been tested on any month outside the March 2026 development window.</li>
+      <li>It does not generalize beyond content types/clients with GSC and GA4 tracking in place.</li>
+    </ul>
+    <p>The correct framing: on this development slice, Logistic Regression and the baseline rule both measure a same-window association between traffic signals and a click-decline label — useful as a directional, decision-support prioritization signal for human review, not as a validated forecasting system.</p>
+  </section>
+
+  <section id="recommendations">
+    <div class="sec-head"><span class="num">06</span><h2>Ranked Recommendations</h2></div>
+    <p>The ranked action queue covers all 349,411 client–content pairs, each with a score, a reason code, and one of four actions.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Action</th><th>Count</th><th>Share</th></tr></thead>
+        <tbody>
+          <tr><td data-label="Action">NO_ACTION</td><td data-label="Count">251,501</td><td data-label="Share">72.0%</td></tr>
+          <tr><td data-label="Action">REVIEW</td><td data-label="Count">53,575</td><td data-label="Share">15.3%</td></tr>
+          <tr><td data-label="Action">MONITOR</td><td data-label="Count">23,348</td><td data-label="Share">6.7%</td></tr>
+          <tr><td data-label="Action">REVIEW_REFRESH</td><td data-label="Count">20,987</td><td data-label="Share">6.0%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="table-caption">Table 3. Ranked action queue: action distribution (349,411 pairs).</p>
+
+    <figure>
+      <img src="img/reason_code_distribution.png" alt="Bar chart of reason code distribution across the ranked action queue.">
+      <figcaption>Figure 4. Ranked action queue: reason code distribution.</figcaption>
+    </figure>
+
+    <p>Note on consistency with Week 4: the underlying 0–100 score and the four score bands are identical to the Week-4 baseline notebook — the <code>NO_ACTION</code> count above (251,501) matches the Week-4 score&nbsp;=&nbsp;0 count exactly. The reason-code wording differs slightly between the two notebooks: Week 4 required a decline of &minus;20% or worse before assigning the decline codes, while Week 7 (used here) assigns those same codes to any decline below 0%, and adds a <code>HIGH_VISIBILITY</code> code Week 4 didn't have. The score and final action a page receives are unaffected — only the reason text a reviewer sees changes.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Reason code</th><th>Recommended action</th></tr></thead>
+        <tbody>
+          <tr><td>DOUBLE_DECLINE</td><td>Review for refresh; verify demand, SERP, and content relevance first.</td></tr>
+          <tr><td>CLICK_DECLINE</td><td>Review title/snippet, SERP position, and search intent before editing.</td></tr>
+          <tr><td>IMPRESSION_DECLINE</td><td>Review ranking, search demand, indexing, and technical visibility.</td></tr>
+          <tr><td>HIGH_VISIBILITY</td><td>Prioritize for monitoring because the page has meaningful visibility.</td></tr>
+          <tr><td>NO_STRONG_SIGNAL</td><td>Do not prioritize without another supporting signal.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="table-caption">Table 4. Archetype &rarr; recommended action mapping.</p>
+
+    <h3>Human review is required, not optional</h3>
+    <p>This follows directly from the leakage finding in Methodology and Limitations. Before acting on any queued page, a reviewer should:</p>
+    <ol class="plain">
+      <li>Verify that the observed decline is not caused by a tracking or data-availability issue.</li>
+      <li>Check whether search demand or seasonality explains the change.</li>
+      <li>Inspect the current SERP position and search intent.</li>
+      <li>Confirm the page is still relevant to its target query.</li>
+      <li>Read the actual content before deciding whether a refresh is appropriate.</li>
+      <li>Confirm the proposed change has a clear purpose.</li>
+      <li>Record the final human decision and, where possible, the reason for accepting or rejecting it.</li>
+    </ol>
+
+    <h3>What this playbook must never automate</h3>
+    <ul>
+      <li>Publish content changes</li>
+      <li>Delete or redirect pages</li>
+      <li>Rewrite titles or content without review</li>
+      <li>Change search intent or canonical URLs</li>
+      <li>Make technical SEO changes</li>
+      <li>Declare a page successful or unsuccessful based only on the score</li>
+      <li>Claim that a refresh caused an improvement without an appropriate follow-up evaluation</li>
+    </ul>
+    <p>The score prioritizes human attention; it does not make content decisions.</p>
+
+    <h3>Monitoring / retrain triggers</h3>
+    <ul>
+      <li>The distribution of action scores changes substantially</li>
+      <li>The proportion of REVIEW_REFRESH items changes unexpectedly</li>
+      <li>Data availability or warehouse schemas change</li>
+      <li>GSC or GA4 coverage changes</li>
+      <li>The meaning of an input signal changes</li>
+      <li>The sealed June 2026 month becomes available — the first real chance to test whether this queue actually predicted anything</li>
+    </ul>
+  </section>
+
+  <section id="reproducibility">
+    <div class="sec-head"><span class="num">07</span><h2>Reproducibility</h2></div>
+    <p>Every result in this paper traces to an executed notebook in this repository, under <code>work/notebooks/</code>: <code>w01_research_question.ipynb</code>, <code>w02_ml_task_framing.ipynb</code>, <code>w03_data_contract.ipynb</code>, <code>w04_baseline_score.ipynb</code>, <code>w05_model.ipynb</code>, <code>w06_validation_audit.ipynb</code>, <code>w07_action_playbook.ipynb</code>, and <code>capstone.ipynb</code> (which mirrors this paper's structure section-for-section). All random processes use <code>random_state=42</code> throughout, applied consistently to both the train/test split and the model itself.</p>
+    <p>To reproduce: clone this repository, request access to the FlyRank internship warehouse dataset on Hugging Face, create a read-only access token, store it as a Colab secret named <code>HF_TOKEN</code>, and open any notebook via its Colab badge — each notebook re-clones the repository and reconnects to the warehouse independently, so any notebook can be run standalone. Figures embedded in this paper are generated in <code>capstone.ipynb</code>, Section 7, and saved to <code>work/figures/</code>.</p>
+    <p>Repository: <a href="https://github.com/MohamedElsayed75/FRW1NB1">github.com/MohamedElsayed75/FRW1NB1</a></p>
+  </section>
+
+  <section id="acknowledgments">
+    <div class="sec-head"><span class="num">08</span><h2>Acknowledgments &amp; Data Credit</h2></div>
+    <p>This work is built on the FlyRank ML Internship dataset — <a href="https://flyrank.ai">flyrank.ai</a>. Thanks to the FlyRank ML Internship program for the warehouse access, the structured weekly curriculum, and the standard this paper tries to hold itself to: observed, measured, directional, decision-support language throughout, no causal claims without a causal design, and no claim that goes further than what the evidence in this repository actually supports.</p>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Built on the FlyRank ML Internship dataset — <a href="https://flyrank.ai">flyrank.ai</a>. Source and notebooks: <a href="https://github.com/MohamedElsayed75/FRW1NB1">github.com/MohamedElsayed75/FRW1NB1</a>.</p>
+  </div>
+</footer>
+
+</body>
+</html>
